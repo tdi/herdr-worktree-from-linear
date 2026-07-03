@@ -2,5 +2,6 @@
   "linearApiKey": "lin_api_xxx",
   "issueLimit": 50,
   "base": "default",
-  "teamKey": "BIT"
+  "teamKey": "BIT",
+  "fzfLayout": "down"
 }

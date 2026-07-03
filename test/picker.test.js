@@ -1,6 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { formatLine, formatLines, lineToIssue } from '../lib/picker.js';
+import { formatLine, formatLines, lineToIssue, fzfArgs } from '../lib/picker.js';
+
+test('fzfArgs adds --layout=reverse only for the top layout', () => {
+  assert.deepEqual(fzfArgs('top'), ['--layout=reverse', '--height=~40%', '--prompt', 'issue> ']);
+  assert.deepEqual(fzfArgs('down'), ['--height=~40%', '--prompt', 'issue> ']);
+  assert.deepEqual(fzfArgs(undefined), ['--height=~40%', '--prompt', 'issue> ']);
+});
 
 const ISSUES = [
   { identifier: 'BIT-990', title: 'Label API keys', branchName: 'tdi/bit-990-label', stateName: 'In Progress', assignee: 'Darek' },

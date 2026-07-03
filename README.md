@@ -38,6 +38,7 @@ herdr plugin install tdi/herdr-worktree-from-linear
 - `base` — where the new branch starts: `"default"` (repo default branch),
   `"head"` (current checkout), or an explicit branch name (e.g. `"develop"`).
 - `teamKey` — optional; restrict to one team (e.g. `BIT`).
+- `fzfLayout` — `"down"` (default, search bar at the bottom) or `"top"` (search bar at the top). The picker renders as a compact window either way.
 
 ## Use
 
