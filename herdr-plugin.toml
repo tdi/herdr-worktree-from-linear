@@ -1,0 +1,18 @@
+id = "tdi.worktree-from-linear"
+name = "Worktree from Linear"
+version = "0.1.0"
+min_herdr_version = "0.7.0"
+description = "Create a git worktree from a Linear issue and open it as a workspace"
+platforms = ["linux", "macos"]
+
+[[actions]]
+id = "pick"
+title = "Worktree from Linear issue"
+contexts = ["workspace", "tab", "pane"]
+command = ["node", "bin/open.js"]
+
+[[panes]]
+id = "picker"
+title = "Pick a Linear issue"
+placement = "overlay"
+command = ["node", "bin/picker.js"]
