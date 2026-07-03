@@ -59,6 +59,23 @@ test('createOrOpenWorktree opens without fetching when the worktree exists', () 
   assert.deepEqual(res.args, ['worktree', 'open', '--cwd', '/repo', '--branch', 'tdi/bit-3', '--focus', '--json']);
 });
 
+test('createOrOpenWorktree creates without fetching when the local branch exists but no worktree', () => {
+  // Verified live: `herdr worktree create --branch <existing-local>` checks out the
+  // existing branch (base ignored), so no fetch is needed and we must NOT try to open
+  // (open errors when no worktree exists for the branch).
+  const calls = [];
+  const exec = (cmd, args) => {
+    calls.push([cmd, ...args]);
+    if (cmd === 'git' && args.includes('list')) return { status: 0, stdout: 'worktree /repo\nbranch refs/heads/main\n', stderr: '' };
+    if (cmd === 'git' && args.includes('rev-parse')) return { status: 0, stdout: '', stderr: '' }; // local branch exists
+    return { status: 0, stdout: '{}', stderr: '' };
+  };
+  const res = createOrOpenWorktree('/repo', 'tdi/bit-4', { baseRef: 'origin/main', needsFetch: true, baseBranch: 'main' }, exec, 'herdr');
+  assert.equal(res.exists, false); // no worktree existed → this is a create
+  assert.equal(calls.some((c) => c.includes('fetch')), false); // branch already local → no fetch
+  assert.deepEqual(res.args, ['worktree', 'create', '--cwd', '/repo', '--branch', 'tdi/bit-4', '--base', 'origin/main', '--focus', '--json']);
+});
+
 test('createOrOpenWorktree throws when fetch fails', () => {
   const exec = (cmd, args) => {
     if (cmd === 'git' && args.includes('list')) return { status: 0, stdout: 'worktree /repo\n', stderr: '' };
