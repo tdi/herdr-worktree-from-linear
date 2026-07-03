@@ -68,7 +68,7 @@ command = ["node", "bin/picker.js"]
 
 **`bin/picker.js`** (orchestrator over `lib/`), via `lib/run.js run({env, exec, fetch, select, log})`:
 
-1. **Config** (`lib/config.js`) — load `config.json`; require `linearApiKey`; defaults `issueLimit = 50`, `teamKey` unset, `baseBranch` unset.
+1. **Config** (`lib/config.js`) — load `config.json`; require `linearApiKey`; defaults `issueLimit = 50`, `base = "default"`, `teamKey` unset.
 2. **Resolve repo** (`lib/repo.js`) — prefer `HERDR_WFP_CWD`; `git -C <cwd> rev-parse --show-toplevel` → repo root. (No GitHub remote check — Linear is repo-agnostic.)
 3. **List issues** (`lib/linear.js`) — POST GraphQL to Linear with the API key; query active issues (state type in `unstarted`,`started`), optional `teamKey` filter, first `issueLimit`, ordered by `updatedAt` desc. Parse into `{ identifier, title, branchName, stateName, assignee, url }`.
 4. **Pick** (`lib/picker.js`) — one line per issue: `<identifier>  <title>  [<stateName>] @<assignee>`; fzf if present, else Node `readline`. Map the chosen line back to its issue by leading identifier.
