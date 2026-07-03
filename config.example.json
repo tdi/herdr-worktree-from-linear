@@ -3,5 +3,6 @@
   "issueLimit": 50,
   "base": "default",
   "teamKey": "BIT",
-  "fzfLayout": "down"
+  "fzfLayout": "down",
+  "placement": "right"
 }

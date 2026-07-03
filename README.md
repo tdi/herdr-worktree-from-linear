@@ -29,7 +29,9 @@ herdr plugin install tdi/herdr-worktree-from-linear
   "linearApiKey": "lin_api_xxx",
   "issueLimit": 50,
   "base": "default",
-  "teamKey": "BIT"
+  "teamKey": "BIT",
+  "placement": "right",
+  "fzfLayout": "down"
 }
 ```
 
@@ -38,6 +40,9 @@ herdr plugin install tdi/herdr-worktree-from-linear
 - `base` — where the new branch starts: `"default"` (repo default branch),
   `"head"` (current checkout), or an explicit branch name (e.g. `"develop"`).
 - `teamKey` — optional; restrict to one team (e.g. `BIT`).
+- `placement` — where the picker pane opens: `"right"` (default), `"left"`,
+  `"top"`, `"down"` (splits, so your work stays visible), or `"overlay"`
+  (full-screen). `left`/`top` open a right/down split then swap into place.
 - `fzfLayout` — `"down"` (default, search bar at the bottom) or `"top"` (search bar at the top). The picker renders as a compact window either way.
 
 ## Use
