@@ -33,6 +33,7 @@ herdr plugin install tdi/herdr-worktree-from-linear
   "assignedToMe": true,
   "placement": "right",
   "fzfLayout": "down",
+  "showIssueDetails": true,
   "popupWidth": "80%",
   "popupHeight": "70%"
 }
@@ -50,6 +51,8 @@ herdr plugin install tdi/herdr-worktree-from-linear
   (full-screen), or `"popup"` (centered floating window). `left`/`top` open a
   right/down split then swap into place.
 - `fzfLayout` — `"down"` (default, search bar at the bottom) or `"top"` (search bar at the top). The picker renders as a compact window either way.
+- `showIssueDetails` — optional; when `true`, a fresh worktree create also opens
+  a pane showing the picked issue's details (see below). Default `false`.
 - `popupWidth` / `popupHeight` — size of the `popup` placement, as a percentage
   (`"80%"`) or a terminal-cell count (`120`). Only used when `placement` is
   `popup`. Defaults `80%` × `70%`.
@@ -65,6 +68,13 @@ Bind the `Worktree from Linear issue` action to a key (herdr `[[keys.command]]`,
 it from the action menu. It lists your team's active issues; pick one and herdr
 creates + focuses a worktree on the issue's branch. If a worktree for that branch
 already exists, it is opened instead.
+
+With `showIssueDetails: true`, a fresh create also opens a pane above the agent
+pane in the new workspace showing
+the issue's details (identifier, title, state, assignee, description). The plugin
+fetches these from Linear with your `linearApiKey` and renders them itself — no
+extra CLI needed. Skipped when an existing worktree is re-opened, to avoid stacking
+duplicate panes.
 
 ## Develop
 

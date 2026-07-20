@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildIssuesBody, parseIssues, listIssues } from '../lib/linear.js';
+import { buildIssuesBody, parseIssues, listIssues, parseIdentifier, buildIssueBody, fetchIssue } from '../lib/linear.js';
 
 const SAMPLE = JSON.stringify({ data: { issues: { nodes: [
   { identifier: 'BIT-990', title: 'Label API keys', branchName: 'tdi/bit-990-label', url: 'u1', state: { name: 'In Progress' }, assignee: { displayName: 'Darek' }, team: { key: 'BIT' } },
@@ -55,4 +55,39 @@ test('listIssues throws on non-2xx', async () => {
 test('listIssues throws on GraphQL errors payload', async () => {
   const fetchFn = async () => ({ ok: true, status: 200, text: async () => '{"errors":[{"message":"bad"}]}' });
   await assert.rejects(() => listIssues({ linearApiKey: 'k', issueLimit: 50 }, fetchFn), /GraphQL error/);
+});
+
+test('parseIdentifier splits team key and number, null on junk', () => {
+  assert.deepEqual(parseIdentifier('BIT-123'), { teamKey: 'BIT', number: 123 });
+  assert.deepEqual(parseIdentifier('ENG2-7'), { teamKey: 'ENG2', number: 7 });
+  assert.equal(parseIdentifier('BIT-'), null);
+  assert.equal(parseIdentifier('-5'), null);
+  assert.equal(parseIdentifier('nodash'), null);
+  assert.equal(parseIdentifier('BIT-12x'), null);
+  assert.equal(parseIdentifier(''), null);
+});
+
+test('buildIssueBody filters by team key and number and asks for the description', () => {
+  const b = buildIssueBody('BIT', 123);
+  assert.match(b.query, /team:\s*\{\s*key:\s*\{\s*eq:\s*"BIT"/);
+  assert.match(b.query, /number:\s*\{\s*eq:\s*123/);
+  assert.match(b.query, /description/);
+});
+
+test('fetchIssue posts with auth and maps a single issue', async () => {
+  const ISSUE = JSON.stringify({ data: { issues: { nodes: [
+    { identifier: 'BIT-123', title: 'Do it', description: 'Body', url: 'u', state: { name: 'Todo' }, assignee: { displayName: 'Sven' }, team: { key: 'BIT' } },
+  ] } } });
+  const calls = [];
+  const fetchFn = async (url, opts) => { calls.push({ url, opts }); return { ok: true, status: 200, text: async () => ISSUE }; };
+  const issue = await fetchIssue({ linearApiKey: 'k' }, 'BIT-123', fetchFn);
+  assert.deepEqual(issue, { identifier: 'BIT-123', title: 'Do it', description: 'Body', url: 'u', stateName: 'Todo', assignee: 'Sven' });
+  assert.equal(calls[0].opts.headers.Authorization, 'k');
+});
+
+test('fetchIssue throws on a bad identifier or a missing issue', async () => {
+  const never = async () => { throw new Error('should not fetch'); };
+  await assert.rejects(() => fetchIssue({ linearApiKey: 'k' }, 'bad', never), /bad issue identifier/);
+  const empty = async () => ({ ok: true, status: 200, text: async () => '{"data":{"issues":{"nodes":[]}}}' });
+  await assert.rejects(() => fetchIssue({ linearApiKey: 'k' }, 'BIT-999', empty), /not found/);
 });

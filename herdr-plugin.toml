@@ -16,3 +16,9 @@ id = "picker"
 title = "Pick a Linear issue"
 placement = "overlay"
 command = ["node", "bin/picker.js"]
+
+[[panes]]
+id = "issue"
+title = "Linear issue"
+placement = "split"
+command = ["node", "bin/issue.js"]

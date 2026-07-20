@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { openPickerArgs, normalizePlacement, swapDirectionFor, parsePaneId, readPlacement, readPopupSize } from '../lib/pane.js';
+import { openPickerArgs, normalizePlacement, swapDirectionFor, parsePaneId, readPlacement, readPopupSize, parseRootPaneId, issuePaneOpenArgs, openIssuePane } from '../lib/pane.js';
 
 test('openPickerArgs defaults to a right split', () => {
   assert.deepEqual(openPickerArgs('tdi.worktree-from-linear'), [
@@ -57,6 +57,44 @@ test('openPickerArgs passes the repo via HERDR_WFP_CWD env, never --cwd', () => 
   assert.equal(openPickerArgs('tdi.worktree-from-linear', '/work/repo').includes('--cwd'), false);
   assert.equal(openPickerArgs('tdi.worktree-from-linear').includes('--env'), false);
   assert.equal(openPickerArgs('tdi.worktree-from-linear', '').includes('--env'), false);
+});
+
+test('parseRootPaneId reads the worktree root pane id, null on junk', () => {
+  assert.equal(parseRootPaneId('{"result":{"root_pane":{"pane_id":"wN:p1"}}}'), 'wN:p1');
+  assert.equal(parseRootPaneId('not json'), null);
+  assert.equal(parseRootPaneId('{"result":{}}'), null);
+});
+
+test('issuePaneOpenArgs targets the root pane and passes the identifier via env', () => {
+  assert.deepEqual(
+    issuePaneOpenArgs('tdi.worktree-from-linear', 'wN:p1', 'BIT-123'),
+    ['plugin', 'pane', 'open', '--plugin', 'tdi.worktree-from-linear', '--entrypoint', 'issue',
+      '--placement', 'split', '--target-pane', 'wN:p1', '--direction', 'down',
+      '--no-focus', '--env', 'HERDR_WFP_ISSUE=BIT-123'],
+  );
+});
+
+test('openIssuePane opens the issue plugin pane below root, then swaps it up', () => {
+  const calls = [];
+  const exec = (cmd, args = []) => {
+    calls.push([cmd, ...args]);
+    if (args[0] === 'plugin' && args[1] === 'pane' && args[2] === 'open') return { status: 0, stdout: '{"result":{"plugin_pane":{"pane":{"pane_id":"wN:pD"}}}}', stderr: '' };
+    return { status: 0, stdout: '', stderr: '' };
+  };
+  const pane = openIssuePane('{"result":{"root_pane":{"pane_id":"wN:p1"}}}', 'BIT-123', 'tdi.worktree-from-linear', exec, 'herdr');
+  assert.equal(pane, 'wN:pD');
+  assert.deepEqual(calls[0], ['herdr', ...issuePaneOpenArgs('tdi.worktree-from-linear', 'wN:p1', 'BIT-123')]);
+  assert.deepEqual(calls[1], ['herdr', 'pane', 'swap', '--direction', 'up', '--pane', 'wN:pD']);
+});
+
+test('openIssuePane no-ops without a root pane, identifier, plugin id, or on open failure', () => {
+  const boom = () => { throw new Error('should not exec'); };
+  assert.equal(openIssuePane('{"result":{}}', 'BIT-1', 'p', boom), null); // no root pane -> no exec
+  assert.equal(openIssuePane('not json', 'BIT-1', 'p', boom), null);
+  assert.equal(openIssuePane('{"result":{"root_pane":{"pane_id":"r"}}}', '', 'p', boom), null); // no identifier
+  assert.equal(openIssuePane('{"result":{"root_pane":{"pane_id":"r"}}}', 'BIT-1', '', boom), null); // no plugin id
+  const failOpen = () => ({ status: 1, stdout: '', stderr: 'nope' });
+  assert.equal(openIssuePane('{"result":{"root_pane":{"pane_id":"r"}}}', 'BIT-1', 'p', failOpen), null);
 });
 
 test('readPlacement reads config.json, tolerant of missing/invalid', () => {
