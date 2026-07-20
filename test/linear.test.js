@@ -17,6 +17,13 @@ test('buildIssuesBody sets first and the active-state filter, team optional', ()
   assert.match(b.query, /team:\s*\{\s*key:\s*\{\s*eq:\s*"BIT"/);
 });
 
+test('buildIssuesBody adds the assignee=me filter only when assignedToMe', () => {
+  const off = buildIssuesBody(50);
+  assert.equal(/assignee:/.test(off.query), false);
+  const on = buildIssuesBody(50, undefined, true);
+  assert.match(on.query, /assignee:\s*\{\s*isMe:\s*\{\s*eq:\s*true/);
+});
+
 test('parseIssues maps nodes and defaults missing fields', () => {
   const issues = parseIssues(SAMPLE);
   assert.equal(issues.length, 2);

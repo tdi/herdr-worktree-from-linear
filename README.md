@@ -30,6 +30,7 @@ herdr plugin install tdi/herdr-worktree-from-linear
   "issueLimit": 50,
   "base": "default",
   "teamKey": "BIT",
+  "assignedToMe": true,
   "placement": "right",
   "fzfLayout": "down",
   "popupWidth": "80%",
@@ -42,6 +43,8 @@ herdr plugin install tdi/herdr-worktree-from-linear
 - `base` — where the new branch starts: `"default"` (repo default branch),
   `"head"` (current checkout), or an explicit branch name (e.g. `"develop"`).
 - `teamKey` — optional; restrict to one team (e.g. `BIT`).
+- `assignedToMe` — optional; when `true`, only list issues assigned to you (the
+  API key's user). Default `false` (all assignees).
 - `placement` — where the picker pane opens: `"right"` (default), `"left"`,
   `"top"`, `"down"` (splits, so your work stays visible), `"overlay"`
   (full-screen), or `"popup"` (centered floating window). `left`/`top` open a
