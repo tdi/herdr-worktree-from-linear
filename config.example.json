@@ -4,5 +4,7 @@
   "base": "default",
   "teamKey": "BIT",
   "fzfLayout": "down",
-  "placement": "right"
+  "placement": "right",
+  "popupWidth": "80%",
+  "popupHeight": "70%"
 }

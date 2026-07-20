@@ -31,7 +31,9 @@ herdr plugin install tdi/herdr-worktree-from-linear
   "base": "default",
   "teamKey": "BIT",
   "placement": "right",
-  "fzfLayout": "down"
+  "fzfLayout": "down",
+  "popupWidth": "80%",
+  "popupHeight": "70%"
 }
 ```
 
@@ -41,9 +43,17 @@ herdr plugin install tdi/herdr-worktree-from-linear
   `"head"` (current checkout), or an explicit branch name (e.g. `"develop"`).
 - `teamKey` — optional; restrict to one team (e.g. `BIT`).
 - `placement` — where the picker pane opens: `"right"` (default), `"left"`,
-  `"top"`, `"down"` (splits, so your work stays visible), or `"overlay"`
-  (full-screen). `left`/`top` open a right/down split then swap into place.
+  `"top"`, `"down"` (splits, so your work stays visible), `"overlay"`
+  (full-screen), or `"popup"` (centered floating window). `left`/`top` open a
+  right/down split then swap into place.
 - `fzfLayout` — `"down"` (default, search bar at the bottom) or `"top"` (search bar at the top). The picker renders as a compact window either way.
+- `popupWidth` / `popupHeight` — size of the `popup` placement, as a percentage
+  (`"80%"`) or a terminal-cell count (`120`). Only used when `placement` is
+  `popup`. Defaults `80%` × `70%`.
+
+`popup` opens the picker as a centered floating window that doesn't disturb your
+pane layout — it requires **herdr ≥ 0.7.4** (older servers reject it; the plugin
+still works with the other placements).
 
 ## Use
 

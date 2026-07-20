@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { openPickerArgs, normalizePlacement, swapDirectionFor, parsePaneId, readPlacement } from '../lib/pane.js';
+import { openPickerArgs, normalizePlacement, swapDirectionFor, parsePaneId, readPlacement, readPopupSize } from '../lib/pane.js';
 
 test('openPickerArgs defaults to a right split', () => {
   assert.deepEqual(openPickerArgs('tdi.worktree-from-linear'), [
@@ -21,10 +21,18 @@ test('openPickerArgs maps each placement to herdr flags', () => {
   assert.deepEqual(tail('top'), ['--placement', 'split', '--direction', 'down', '--focus']);
   // unknown placement falls back to the default (right)
   assert.deepEqual(tail('sideways'), ['--placement', 'split', '--direction', 'right', '--focus']);
+  assert.deepEqual(tail('popup'), ['--placement', 'popup', '--width', '80%', '--height', '70%', '--focus']);
+});
+
+test('openPickerArgs adds --width/--height only for popup', () => {
+  assert.deepEqual(openPickerArgs('id', undefined, 'popup', { width: '90%', height: '60%' }).slice(7),
+    ['--placement', 'popup', '--width', '90%', '--height', '60%', '--focus']);
+  // a non-popup placement ignores any size passed in
+  assert.equal(openPickerArgs('id', undefined, 'overlay', { width: '90%', height: '60%' }).includes('--width'), false);
 });
 
 test('normalizePlacement keeps known values and defaults the rest to right', () => {
-  for (const p of ['overlay', 'right', 'left', 'down', 'top']) assert.equal(normalizePlacement(p), p);
+  for (const p of ['overlay', 'popup', 'right', 'left', 'down', 'top']) assert.equal(normalizePlacement(p), p);
   assert.equal(normalizePlacement('bogus'), 'right');
   assert.equal(normalizePlacement(undefined), 'right');
 });
@@ -35,6 +43,7 @@ test('swapDirectionFor only returns a direction for left/top', () => {
   assert.equal(swapDirectionFor('right'), null);
   assert.equal(swapDirectionFor('down'), null);
   assert.equal(swapDirectionFor('overlay'), null);
+  assert.equal(swapDirectionFor('popup'), null);
 });
 
 test('parsePaneId reads the opened pane id, null on junk', () => {
@@ -61,4 +70,17 @@ test('readPlacement reads config.json, tolerant of missing/invalid', () => {
   rmSync(dir, { recursive: true, force: true });
   assert.equal(readPlacement(dir), 'right'); // missing file -> default
   assert.equal(readPlacement(undefined), 'right'); // no dir -> default
+});
+
+test('readPopupSize reads/validates config, falling back to defaults', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'wfl-popup-'));
+  writeFileSync(join(dir, 'config.json'), '{"popupWidth":"90%","popupHeight":60}');
+  assert.deepEqual(readPopupSize(dir), { width: '90%', height: '60' }); // "%" string and integer cells both accepted
+  writeFileSync(join(dir, 'config.json'), '{"popupWidth":"nope","popupHeight":"200%"}');
+  assert.deepEqual(readPopupSize(dir), { width: '80%', height: '70%' }); // invalid values -> defaults
+  writeFileSync(join(dir, 'config.json'), '{bad');
+  assert.deepEqual(readPopupSize(dir), { width: '80%', height: '70%' }); // unparseable -> defaults
+  rmSync(dir, { recursive: true, force: true });
+  assert.deepEqual(readPopupSize(dir), { width: '80%', height: '70%' }); // missing file -> defaults
+  assert.deepEqual(readPopupSize(undefined), { width: '80%', height: '70%' }); // no dir -> defaults
 });
