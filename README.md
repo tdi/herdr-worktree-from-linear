@@ -31,6 +31,7 @@ herdr plugin install tdi/herdr-worktree-from-linear
   "base": "default",
   "teamKey": "BIT",
   "assignedToMe": true,
+  "includeTriage": true,
   "placement": "right",
   "fzfLayout": "down",
   "showIssueDetails": true,
@@ -46,6 +47,8 @@ herdr plugin install tdi/herdr-worktree-from-linear
 - `teamKey` — optional; restrict to one team (e.g. `BIT`).
 - `assignedToMe` — optional; when `true`, only list issues assigned to you (the
   API key's user). Default `false` (all assignees).
+- `includeTriage` — optional; when `true`, also list issues in the triage state
+  (on top of the unstarted/started defaults). Default `false`.
 - `placement` — where the picker pane opens: `"right"` (default), `"left"`,
   `"top"`, `"down"` (splits, so your work stays visible), `"overlay"`
   (full-screen), or `"popup"` (centered floating window). `left`/`top` open a

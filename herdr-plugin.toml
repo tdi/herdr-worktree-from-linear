@@ -1,6 +1,6 @@
 id = "tdi.worktree-from-linear"
 name = "Worktree from Linear"
-version = "0.1.0"
+version = "0.2.0"
 min_herdr_version = "0.7.0"
 description = "Create a git worktree from a Linear issue and open it as a workspace"
 platforms = ["linux", "macos"]

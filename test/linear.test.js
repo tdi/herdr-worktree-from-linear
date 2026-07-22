@@ -24,6 +24,15 @@ test('buildIssuesBody adds the assignee=me filter only when assignedToMe', () =>
   assert.match(on.query, /assignee:\s*\{\s*isMe:\s*\{\s*eq:\s*true/);
 });
 
+test('buildIssuesBody includes the triage state only when includeTriage', () => {
+  const off = buildIssuesBody(50);
+  assert.equal(/triage/.test(off.query), false);
+  const on = buildIssuesBody(50, undefined, undefined, true);
+  assert.match(on.query, /"triage"/);
+  assert.match(on.query, /unstarted/);
+  assert.match(on.query, /started/);
+});
+
 test('parseIssues maps nodes and defaults missing fields', () => {
   const issues = parseIssues(SAMPLE);
   assert.equal(issues.length, 2);
