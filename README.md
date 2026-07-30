@@ -29,6 +29,7 @@ herdr plugin install tdi/herdr-worktree-from-linear
   "linearApiKey": "lin_api_xxx",
   "issueLimit": 50,
   "base": "default",
+  "ticketConfigPath": ".herdr/ticket.json",
   "teamKey": "BIT",
   "assignedToMe": true,
   "includeTriage": true,
@@ -44,6 +45,10 @@ herdr plugin install tdi/herdr-worktree-from-linear
 - `issueLimit` — max issues listed (default 50).
 - `base` — where the new branch starts: `"default"` (repo default branch),
   `"head"` (current checkout), or an explicit branch name (e.g. `"develop"`).
+- `ticketConfigPath` — repository-relative location for the selected ticket JSON
+  in the opened worktree. Default: `.herdr/ticket.json`. The plugin does not
+  stage or ignore this generated file; add the path to your repository's
+  `.gitignore` if it should remain untracked.
 - `teamKey` — optional; restrict to one team (e.g. `BIT`).
 - `assignedToMe` — optional; when `true`, only list issues assigned to you (the
   API key's user). Default `false` (all assignees).
@@ -78,6 +83,27 @@ the issue's details (identifier, title, state, assignee, description). The plugi
 fetches these from Linear with your `linearApiKey` and renders them itself — no
 extra CLI needed. Skipped when an existing worktree is re-opened, to avoid stacking
 duplicate panes.
+
+Every selected issue is also fetched in full and written as JSON to
+`ticketConfigPath` in the opened worktree:
+
+```json
+{
+  "version": 1,
+  "ticket": {
+    "identifier": "BIT-123",
+    "title": "Example issue",
+    "description": "...",
+    "url": "https://linear.app/...",
+    "stateName": "In Progress",
+    "assignee": "Example User"
+  }
+}
+```
+
+This gives agents and other worktree-local tooling a machine-readable ticket
+contract. It is written after the worktree has been created or opened; a ticket
+write failure is reported as a warning and does not affect the worktree.
 
 ## Develop
 

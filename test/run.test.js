@@ -17,14 +17,18 @@ function keyDir(config = {}) {
 
 function fakeExec() {
   const calls = [];
+  let created = false;
   const exec = (cmd, args = []) => {
     calls.push([cmd, ...args]);
     if (cmd === 'git' && args.includes('--show-toplevel')) return { status: 0, stdout: '/repo\n', stderr: '' };
     if (cmd === 'git' && args.includes('symbolic-ref')) return { status: 0, stdout: 'origin/main\n', stderr: '' };
-    if (cmd === 'git' && args.includes('list')) return { status: 0, stdout: 'worktree /repo\nbranch refs/heads/main\n', stderr: '' };
+    if (cmd === 'git' && args.includes('list')) return { status: 0, stdout: created ? 'worktree /repo\nbranch refs/heads/main\n\nworktree /wt/bit-1\nbranch refs/heads/tdi/bit-1-do-it\n' : 'worktree /repo\nbranch refs/heads/main\n', stderr: '' };
     if (cmd === 'git' && args.includes('rev-parse')) return { status: 1, stdout: '', stderr: '' };
     if (cmd === 'git' && args.includes('fetch')) return { status: 0, stdout: '', stderr: '' };
-    if (args[0] === 'worktree') return { status: 0, stdout: '{"type":"worktree_created"}', stderr: '' };
+    if (args[0] === 'worktree') {
+      created = true;
+      return { status: 0, stdout: '{"type":"worktree_created"}', stderr: '' };
+    }
     return { status: 0, stdout: '', stderr: '' };
   };
   return { exec, calls };
@@ -41,17 +45,45 @@ test('run creates a worktree on the issue branch off origin/main', async () => {
   rmSync(dir, { recursive: true, force: true });
 });
 
+test('run writes ticket config after logging success and treats write failures as warnings', async () => {
+  const dir = keyDir();
+  const { exec } = fakeExec();
+  const logs = [];
+  const fetchFn = async () => ({ ok: true, status: 200, text: async () => SAMPLE });
+  const code = await run({
+    env: { HERDR_PLUGIN_CONFIG_DIR: dir, HERDR_WFP_CWD: '/repo', HERDR_BIN_PATH: 'herdr' },
+    exec,
+    fetchFn,
+    select: async (list) => list[0],
+    writeTicket: (worktreePath, ticketConfigPath, ticket) => {
+      assert.equal(worktreePath, '/wt/bit-1');
+      assert.equal(ticketConfigPath, '.herdr/ticket.json');
+      assert.equal(ticket.identifier, 'BIT-1');
+      throw new Error('Linear is temporarily unavailable');
+    },
+    log: (message) => logs.push(message),
+  });
+  assert.equal(code, 0);
+  assert.match(logs[0], /created worktree/);
+  assert.match(logs[1], /could not write ticket config: Linear is temporarily unavailable/);
+  rmSync(dir, { recursive: true, force: true });
+});
+
 test('run opens the issue-details plugin pane in the freshly created worktree', async () => {
   const dir = keyDir({ showIssueDetails: true });
   const calls = [];
+  let created = false;
   const exec = (cmd, args = []) => {
     calls.push([cmd, ...args]);
     if (cmd === 'git' && args.includes('--show-toplevel')) return { status: 0, stdout: '/repo\n', stderr: '' };
     if (cmd === 'git' && args.includes('symbolic-ref')) return { status: 0, stdout: 'origin/main\n', stderr: '' };
-    if (cmd === 'git' && args.includes('list')) return { status: 0, stdout: 'worktree /repo\nbranch refs/heads/main\n', stderr: '' };
+    if (cmd === 'git' && args.includes('list')) return { status: 0, stdout: created ? 'worktree /repo\nbranch refs/heads/main\n\nworktree /wt/bit-1\nbranch refs/heads/tdi/bit-1-do-it\n' : 'worktree /repo\nbranch refs/heads/main\n', stderr: '' };
     if (cmd === 'git' && args.includes('rev-parse')) return { status: 1, stdout: '', stderr: '' };
     if (cmd === 'git' && args.includes('fetch')) return { status: 0, stdout: '', stderr: '' };
-    if (args[0] === 'worktree') return { status: 0, stdout: '{"result":{"root_pane":{"pane_id":"wN:p1"}}}', stderr: '' };
+    if (args[0] === 'worktree') {
+      created = true;
+      return { status: 0, stdout: '{"result":{"root_pane":{"pane_id":"wN:p1"}}}', stderr: '' };
+    }
     if (args[0] === 'plugin' && args[1] === 'pane' && args[2] === 'open') return { status: 0, stdout: '{"result":{"plugin_pane":{"pane":{"pane_id":"wN:pD"}}}}', stderr: '' };
     return { status: 0, stdout: '', stderr: '' };
   };
@@ -65,14 +97,18 @@ test('run opens the issue-details plugin pane in the freshly created worktree', 
 test('run does NOT open a details pane unless showIssueDetails is set', async () => {
   const dir = keyDir(); // default: showIssueDetails off
   const calls = [];
+  let created = false;
   const exec = (cmd, args = []) => {
     calls.push([cmd, ...args]);
     if (cmd === 'git' && args.includes('--show-toplevel')) return { status: 0, stdout: '/repo\n', stderr: '' };
     if (cmd === 'git' && args.includes('symbolic-ref')) return { status: 0, stdout: 'origin/main\n', stderr: '' };
-    if (cmd === 'git' && args.includes('list')) return { status: 0, stdout: 'worktree /repo\nbranch refs/heads/main\n', stderr: '' };
+    if (cmd === 'git' && args.includes('list')) return { status: 0, stdout: created ? 'worktree /repo\nbranch refs/heads/main\n\nworktree /wt/bit-1\nbranch refs/heads/tdi/bit-1-do-it\n' : 'worktree /repo\nbranch refs/heads/main\n', stderr: '' };
     if (cmd === 'git' && args.includes('rev-parse')) return { status: 1, stdout: '', stderr: '' };
     if (cmd === 'git' && args.includes('fetch')) return { status: 0, stdout: '', stderr: '' };
-    if (args[0] === 'worktree') return { status: 0, stdout: '{"result":{"root_pane":{"pane_id":"wN:p1"}}}', stderr: '' };
+    if (args[0] === 'worktree') {
+      created = true;
+      return { status: 0, stdout: '{"result":{"root_pane":{"pane_id":"wN:p1"}}}', stderr: '' };
+    }
     return { status: 0, stdout: '', stderr: '' };
   };
   const fetchFn = async () => ({ ok: true, status: 200, text: async () => SAMPLE });
