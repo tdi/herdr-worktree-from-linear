@@ -1,10 +1,22 @@
 {
-  "linearApiKey": "lin_api_xxx",
   "issueLimit": 50,
   "base": "default",
+  "ticketConfigPath": ".herdr/ticket.json",
   "teamKey": "BIT",
   "fzfLayout": "down",
   "placement": "right",
   "popupWidth": "80%",
-  "popupHeight": "70%"
+  "popupHeight": "70%",
+  "linearOrgs": [
+    {
+      "id": "internal",
+      "linearApiKey": "lin_api_internal_xxx",
+      "teamKey": "BIT"
+    },
+    {
+      "id": "client",
+      "linearApiKey": "lin_api_client_xxx",
+      "teamKey": "CLI"
+    }
+  ]
 }
