@@ -2,6 +2,7 @@
   "linearApiKey": "lin_api_xxx",
   "issueLimit": 50,
   "base": "default",
+  "ticketConfigPath": ".herdr/ticket.json",
   "teamKey": "BIT",
   "fzfLayout": "down",
   "placement": "right",

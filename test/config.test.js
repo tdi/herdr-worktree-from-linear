@@ -13,13 +13,13 @@ function withDir(contents) {
 
 test('loadConfig merges defaults and keeps the api key', () => {
   const dir = withDir('{"linearApiKey":"k"}');
-  assert.deepEqual(loadConfig(dir), { issueLimit: 50, base: 'default', fzfLayout: 'down', showIssueDetails: false, linearApiKey: 'k' });
+  assert.deepEqual(loadConfig(dir), { issueLimit: 50, base: 'default', fzfLayout: 'down', showIssueDetails: false, ticketConfigPath: '.herdr/ticket.json', linearApiKey: 'k' });
   rmSync(dir, { recursive: true, force: true });
 });
 
 test('loadConfig honors overrides', () => {
   const dir = withDir('{"linearApiKey":"k","issueLimit":10,"base":"head","teamKey":"BIT"}');
-  assert.deepEqual(loadConfig(dir), { issueLimit: 10, base: 'head', fzfLayout: 'down', showIssueDetails: false, linearApiKey: 'k', teamKey: 'BIT' });
+  assert.deepEqual(loadConfig(dir), { issueLimit: 10, base: 'head', fzfLayout: 'down', showIssueDetails: false, ticketConfigPath: '.herdr/ticket.json', linearApiKey: 'k', teamKey: 'BIT' });
   rmSync(dir, { recursive: true, force: true });
 });
 
@@ -34,4 +34,13 @@ test('loadConfig throws on malformed JSON', () => {
   const dir = withDir('{bad');
   assert.throws(() => loadConfig(dir), /invalid config\.json/);
   rmSync(dir, { recursive: true, force: true });
+});
+
+test('loadConfig rejects ticket config paths outside the worktree', () => {
+  const absolute = withDir('{"linearApiKey":"k","ticketConfigPath":"/tmp/ticket.json"}');
+  const parent = withDir('{"linearApiKey":"k","ticketConfigPath":"../ticket.json"}');
+  assert.throws(() => loadConfig(absolute), /repository-relative/);
+  assert.throws(() => loadConfig(parent), /stay within the worktree/);
+  rmSync(absolute, { recursive: true, force: true });
+  rmSync(parent, { recursive: true, force: true });
 });
