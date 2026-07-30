@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { formatLine, formatLines, lineToIssue, fzfArgs } from '../lib/picker.js';
+import { formatLine, formatLines, lineToIssue, formatOrganizationLine, lineToOrganization, fzfArgs } from '../lib/picker.js';
 
 test('fzfArgs adds --layout=reverse only for the top layout', () => {
   assert.deepEqual(fzfArgs('top'), ['--layout=reverse', '--height=~40%', '--prompt', 'issue> ']);
@@ -24,4 +24,11 @@ test('lineToIssue maps a chosen line back by leading identifier', () => {
   assert.equal(lineToIssue(lines[1], ISSUES).identifier, 'BIT-988');   // title contains '[v2]' but leading token wins
   assert.equal(lineToIssue('', ISSUES), null);
   assert.equal(lineToIssue('NOPE-1 gone', ISSUES), null);
+});
+
+test('organization picker maps configured ids', () => {
+  const organizations = [{ id: 'internal' }, { id: 'client' }];
+  assert.equal(formatOrganizationLine(organizations[0]), 'internal');
+  assert.equal(lineToOrganization('client\n', organizations), organizations[1]);
+  assert.equal(lineToOrganization('missing', organizations), null);
 });

@@ -69,6 +69,47 @@ test('run writes ticket config after logging success and treats write failures a
   rmSync(dir, { recursive: true, force: true });
 });
 
+test('run selects an organization before fetching only its issues', async () => {
+  const dir = keyDir({ linearOrgs: [{ id: 'internal', linearApiKey: 'internal-key' }, { id: 'client', linearApiKey: 'client-key' }] });
+  const { exec } = fakeExec();
+  const fetchCalls = [];
+  let offered;
+  await run({
+    env: { HERDR_PLUGIN_CONFIG_DIR: dir, HERDR_WFP_CWD: '/repo', HERDR_BIN_PATH: 'herdr' },
+    exec,
+    fetchFn: async (_url, options) => {
+      fetchCalls.push(options);
+      return { ok: true, status: 200, text: async () => SAMPLE };
+    },
+    selectOrganization: async (organizations) => { offered = organizations; return organizations[1]; },
+    select: async (issues) => issues[0],
+    writeTicket: () => '/wt/bit-1/.herdr/ticket.json',
+    log: () => {},
+  });
+  assert.deepEqual(offered.map((organization) => organization.id), ['internal', 'client']);
+  assert.equal(fetchCalls.length, 2);
+  assert.ok(fetchCalls.every((call) => call.headers.Authorization === 'client-key'));
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('run cancels before fetching issues when organization selection is cancelled', async () => {
+  const dir = keyDir({ linearOrgs: [{ id: 'internal', linearApiKey: 'internal-key' }, { id: 'client', linearApiKey: 'client-key' }] });
+  const { exec } = fakeExec();
+  let fetches = 0;
+  const logs = [];
+  const code = await run({
+    env: { HERDR_PLUGIN_CONFIG_DIR: dir, HERDR_WFP_CWD: '/repo' },
+    exec,
+    fetchFn: async () => { fetches += 1; throw new Error('should not fetch'); },
+    selectOrganization: async () => null,
+    log: (message) => logs.push(message),
+  });
+  assert.equal(code, 0);
+  assert.equal(fetches, 0);
+  assert.deepEqual(logs, ['worktree-from-linear: cancelled']);
+  rmSync(dir, { recursive: true, force: true });
+});
+
 test('run opens the issue-details plugin pane in the freshly created worktree', async () => {
   const dir = keyDir({ showIssueDetails: true });
   const calls = [];

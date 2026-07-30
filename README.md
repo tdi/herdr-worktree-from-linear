@@ -22,11 +22,10 @@ herdr plugin install tdi/herdr-worktree-from-linear
 
 ## Configure
 
-`config.json` in the plugin config dir (`herdr plugin config-dir tdi.worktree-from-linear`):
+`config.json` in the plugin config dir (`herdr plugin config-dir tdi.worktree-from-linear`). Shared options apply to every organization; each `linearOrgs` entry can override them.
 
 ```json
 {
-  "linearApiKey": "lin_api_xxx",
   "issueLimit": 50,
   "base": "default",
   "ticketConfigPath": ".herdr/ticket.json",
@@ -37,11 +36,25 @@ herdr plugin install tdi/herdr-worktree-from-linear
   "fzfLayout": "down",
   "showIssueDetails": true,
   "popupWidth": "80%",
-  "popupHeight": "70%"
+  "popupHeight": "70%",
+  "linearOrgs": [
+    {
+      "id": "internal",
+      "linearApiKey": "lin_api_internal_xxx",
+      "teamKey": "BIT",
+      "assignedToMe": true,
+      "includeTriage": true
+    },
+    {
+      "id": "client",
+      "linearApiKey": "lin_api_client_xxx",
+      "teamKey": "CLI"
+    }
+  ]
 }
 ```
 
-- `linearApiKey` (required).
+- `linearOrgs` — preferred list of Linear organization profiles. Each profile needs a unique whitespace-free `id` and its `linearApiKey`; it may override any shared option below. A legacy top-level `linearApiKey` still works as a single `default` profile.
 - `issueLimit` — max issues listed (default 50).
 - `base` — where the new branch starts: `"default"` (repo default branch),
   `"head"` (current checkout), or an explicit branch name (e.g. `"develop"`).
@@ -73,9 +86,10 @@ still works with the other placements).
 
 Bind the `Worktree from Linear issue` action to a key (herdr `[[keys.command]]`,
 `type = "plugin_action"`, `command = "tdi.worktree-from-linear.pick"`), or invoke
-it from the action menu. It lists your team's active issues; pick one and herdr
-creates + focuses a worktree on the issue's branch. If a worktree for that branch
-already exists, it is opened instead.
+it from the action menu. If multiple organizations are configured, select one by
+its configured ID, then the plugin fetches only that organization's active issues.
+Pick an issue and herdr creates + focuses a worktree on the issue's branch. If a
+worktree for that branch already exists, it is opened instead.
 
 With `showIssueDetails: true`, a fresh create also opens a pane above the agent
 pane in the new workspace showing
