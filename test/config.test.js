@@ -11,6 +11,18 @@ function withDir(contents) {
   return dir;
 }
 
+function withEnvKey(value, fn) {
+  const previous = process.env.LINEAR_API_KEY;
+  if (value === null) delete process.env.LINEAR_API_KEY;
+  else process.env.LINEAR_API_KEY = value;
+  try {
+    fn();
+  } finally {
+    if (previous === undefined) delete process.env.LINEAR_API_KEY;
+    else process.env.LINEAR_API_KEY = previous;
+  }
+}
+
 test('loadConfig merges defaults and keeps the api key', () => {
   const dir = withDir('{"linearApiKey":"k"}');
   assert.deepEqual(loadConfig(dir), { issueLimit: 50, base: 'default', fzfLayout: 'down', showIssueDetails: false, linearApiKey: 'k' });
@@ -23,10 +35,37 @@ test('loadConfig honors overrides', () => {
   rmSync(dir, { recursive: true, force: true });
 });
 
-test('loadConfig throws when linearApiKey is missing', () => {
+test('loadConfig throws when linearApiKey is missing everywhere', () => {
   const dir = withDir('{"issueLimit":5}');
-  assert.throws(() => loadConfig(dir), /set linearApiKey/);
-  assert.throws(() => loadConfig(undefined), /set linearApiKey/);
+  withEnvKey(null, () => {
+    assert.throws(() => loadConfig(dir), /set linearApiKey/);
+    assert.throws(() => loadConfig(undefined), /LINEAR_API_KEY/);
+  });
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('loadConfig falls back to LINEAR_API_KEY when config omits the key', () => {
+  const dir = withDir('{"issueLimit":5}');
+  withEnvKey('env-key', () => {
+    assert.equal(loadConfig(dir).linearApiKey, 'env-key');
+    assert.equal(loadConfig(undefined).linearApiKey, 'env-key');
+  });
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('loadConfig prefers config.json over LINEAR_API_KEY', () => {
+  const dir = withDir('{"linearApiKey":"file-key"}');
+  withEnvKey('env-key', () => {
+    assert.equal(loadConfig(dir).linearApiKey, 'file-key');
+  });
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('loadConfig ignores an empty LINEAR_API_KEY', () => {
+  const dir = withDir('{"issueLimit":5}');
+  withEnvKey('', () => {
+    assert.throws(() => loadConfig(dir), /set linearApiKey/);
+  });
   rmSync(dir, { recursive: true, force: true });
 });
 

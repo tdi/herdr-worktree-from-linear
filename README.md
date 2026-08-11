@@ -17,7 +17,8 @@ herdr plugin install tdi/herdr-worktree-from-linear
 - **`fzf`** — the fuzzy picker (`brew install fzf`). Required for the intended
   overlay; without it a plain numbered prompt is used.
 - **A Linear personal API key** — Linear → Settings → Security & access → API →
-  create a personal key. Put it in the plugin config (below).
+  create a personal key. Put it in the plugin config, or export it as
+  `LINEAR_API_KEY` (below).
 - **`git`** and **Node.js** (herdr invokes `node`). No `gh` needed.
 
 ## Configure
@@ -40,7 +41,7 @@ herdr plugin install tdi/herdr-worktree-from-linear
 }
 ```
 
-- `linearApiKey` (required).
+- `linearApiKey` (required, unless supplied via the environment — see below).
 - `issueLimit` — max issues listed (default 50).
 - `base` — where the new branch starts: `"default"` (repo default branch),
   `"head"` (current checkout), or an explicit branch name (e.g. `"develop"`).
@@ -59,6 +60,15 @@ herdr plugin install tdi/herdr-worktree-from-linear
 - `popupWidth` / `popupHeight` — size of the `popup` placement, as a percentage
   (`"80%"`) or a terminal-cell count (`120`). Only used when `placement` is
   `popup`. Defaults `80%` × `70%`.
+
+### API key from the environment
+
+If `linearApiKey` is absent from `config.json`, the plugin falls back to the
+`LINEAR_API_KEY` environment variable — the same name Linear's own SDK and CLI
+use. Keep the key in a secret manager instead of on disk: herdr spawns plugin
+actions as child processes, so anything that exports the variable into the herdr
+server's environment works — `op run --`, a systemd `EnvironmentFile=`, direnv,
+or a plain shell export before `herdr`. `config.json` wins when both are set.
 
 `popup` opens the picker as a centered floating window that doesn't disturb your
 pane layout — it requires **herdr ≥ 0.7.4** (older servers reject it; the plugin

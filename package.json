@@ -1,6 +1,6 @@
 {
   "name": "herdr-worktree-from-linear",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Create a git worktree from a Linear issue and open it as a herdr workspace",
   "type": "module",
   "private": true,
