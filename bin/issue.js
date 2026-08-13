@@ -9,7 +9,7 @@ async function main() {
   const identifier = process.env.HERDR_WFP_ISSUE || '';
   let issue;
   try {
-    const config = loadConfig(process.env.HERDR_PLUGIN_CONFIG_DIR);
+    const config = loadConfig(process.env.HERDR_PLUGIN_CONFIG_DIR, process.env.HERDR_WFP_SOURCE_REPO_ROOT);
     issue = await fetchIssue(config, identifier);
   } catch (err) {
     issue = { identifier, error: err.message };

@@ -58,7 +58,7 @@ test('run opens the issue-details plugin pane in the freshly created worktree', 
   const fetchFn = async () => ({ ok: true, status: 200, text: async () => SAMPLE });
   const code = await run({ env: { HERDR_PLUGIN_CONFIG_DIR: dir, HERDR_WFP_CWD: '/repo', HERDR_BIN_PATH: 'herdr', HERDR_PLUGIN_ID: 'tdi.worktree-from-linear' }, exec, fetchFn, select: async (list) => list[0], log: () => {} });
   assert.equal(code, 0);
-  assert.ok(calls.some((c) => c[0] === 'herdr' && c[1] === 'plugin' && c[2] === 'pane' && c[3] === 'open' && c.includes('issue') && c.includes('HERDR_WFP_ISSUE=BIT-1')));
+  assert.ok(calls.some((c) => c[0] === 'herdr' && c[1] === 'plugin' && c[2] === 'pane' && c[3] === 'open' && c.includes('issue') && c.includes('HERDR_WFP_ISSUE=BIT-1') && c.includes('HERDR_WFP_SOURCE_REPO_ROOT=/repo')));
   rmSync(dir, { recursive: true, force: true });
 });
 

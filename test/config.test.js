@@ -61,6 +61,26 @@ test('loadConfig prefers config.json over LINEAR_API_KEY', () => {
   rmSync(dir, { recursive: true, force: true });
 });
 
+test('loadConfig selects the most specific path key before the default key', () => {
+  const dir = withDir(JSON.stringify({
+    linearApiKey: 'default-key',
+    linearApiKeysByPath: {
+      '/projects': 'projects-key',
+      '/projects/acme': 'acme-key',
+    },
+  }));
+  assert.equal(loadConfig(dir, '/projects/acme/app').linearApiKey, 'acme-key');
+  assert.equal(loadConfig(dir, '/projects/other/app').linearApiKey, 'projects-key');
+  assert.equal(loadConfig(dir, '/project').linearApiKey, 'default-key');
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('loadConfig ignores invalid path key entries', () => {
+  const dir = withDir(JSON.stringify({ linearApiKey: 'default-key', linearApiKeysByPath: { '/repo': '' } }));
+  assert.equal(loadConfig(dir, '/repo').linearApiKey, 'default-key');
+  rmSync(dir, { recursive: true, force: true });
+});
+
 test('loadConfig ignores an empty LINEAR_API_KEY', () => {
   const dir = withDir('{"issueLimit":5}');
   withEnvKey('', () => {
