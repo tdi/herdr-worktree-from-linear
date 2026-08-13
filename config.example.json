@@ -1,5 +1,8 @@
 {
   "linearApiKey": "lin_api_xxx",
+  "linearApiKeysByPath": {
+    "~/work/acme": "lin_api_project_specific"
+  },
   "issueLimit": 50,
   "base": "default",
   "teamKey": "BIT",

@@ -28,6 +28,9 @@ herdr plugin install tdi/herdr-worktree-from-linear
 ```json
 {
   "linearApiKey": "lin_api_xxx",
+  "linearApiKeysByPath": {
+    "/absolute/path/to/project": "lin_api_project_specific"
+  },
   "issueLimit": 50,
   "base": "default",
   "teamKey": "BIT",
@@ -42,6 +45,13 @@ herdr plugin install tdi/herdr-worktree-from-linear
 ```
 
 - `linearApiKey` (required, unless supplied via the environment — see below).
+- `linearApiKeysByPath` — optional map of absolute project paths to Linear API
+  keys. The most specific containing path wins; unmatched paths use
+  `linearApiKey` or `LINEAR_API_KEY`. This supports separate Linear workspaces
+  without changing the herdr server environment. Paths must be absolute (a
+  leading `~` is expanded); relative entries are ignored. `"/"` works as a
+  catch-all. Matching uses the *source* repository, so invoking the action from
+  a worktree created off that repo selects the same key.
 - `issueLimit` — max issues listed (default 50).
 - `base` — where the new branch starts: `"default"` (repo default branch),
   `"head"` (current checkout), or an explicit branch name (e.g. `"develop"`).

@@ -65,12 +65,12 @@ test('parseRootPaneId reads the worktree root pane id, null on junk', () => {
   assert.equal(parseRootPaneId('{"result":{}}'), null);
 });
 
-test('issuePaneOpenArgs targets the root pane and passes the identifier via env', () => {
+test('issuePaneOpenArgs targets the root pane and passes the identifier and source repository via env', () => {
   assert.deepEqual(
-    issuePaneOpenArgs('tdi.worktree-from-linear', 'wN:p1', 'BIT-123'),
+    issuePaneOpenArgs('tdi.worktree-from-linear', 'wN:p1', 'BIT-123', '/repo'),
     ['plugin', 'pane', 'open', '--plugin', 'tdi.worktree-from-linear', '--entrypoint', 'issue',
       '--placement', 'split', '--target-pane', 'wN:p1', '--direction', 'down',
-      '--no-focus', '--env', 'HERDR_WFP_ISSUE=BIT-123'],
+      '--no-focus', '--env', 'HERDR_WFP_ISSUE=BIT-123', '--env', 'HERDR_WFP_SOURCE_REPO_ROOT=/repo'],
   );
 });
 
