@@ -62,6 +62,42 @@ test('run opens the issue-details plugin pane in the freshly created worktree', 
   rmSync(dir, { recursive: true, force: true });
 });
 
+test('run keys config off the source repo when invoked from inside a worktree', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'wfl-run-'));
+  writeFileSync(join(dir, 'config.json'), JSON.stringify({
+    linearApiKey: 'default-key',
+    linearApiKeysByPath: { '/projects/acme': 'acme-key' },
+    showIssueDetails: true,
+  }));
+  const calls = [];
+  const exec = (cmd, args = []) => {
+    calls.push([cmd, ...args]);
+    // The action was triggered from a worktree checkout outside the source repo.
+    if (cmd === 'git' && args.includes('--show-toplevel')) return { status: 0, stdout: '/wt/BIT-1\n', stderr: '' };
+    if (cmd === 'git' && args.includes('--git-common-dir')) return { status: 0, stdout: '/projects/acme/.git\n', stderr: '' };
+    if (cmd === 'git' && args.includes('symbolic-ref')) return { status: 0, stdout: 'origin/main\n', stderr: '' };
+    if (cmd === 'git' && args.includes('list')) return { status: 0, stdout: 'worktree /wt/BIT-1\nbranch refs/heads/main\n', stderr: '' };
+    if (cmd === 'git' && args.includes('rev-parse')) return { status: 1, stdout: '', stderr: '' };
+    if (cmd === 'git' && args.includes('fetch')) return { status: 0, stdout: '', stderr: '' };
+    if (args[0] === 'worktree') return { status: 0, stdout: '{"result":{"root_pane":{"pane_id":"wN:p1"}}}', stderr: '' };
+    if (args[0] === 'plugin') return { status: 0, stdout: '{"result":{"plugin_pane":{"pane":{"pane_id":"wN:pD"}}}}', stderr: '' };
+    return { status: 0, stdout: '', stderr: '' };
+  };
+  let seenAuth = null;
+  const fetchFn = async (_url, opts) => {
+    seenAuth = opts.headers.Authorization;
+    return { ok: true, status: 200, text: async () => SAMPLE };
+  };
+  const code = await run({ env: { HERDR_PLUGIN_CONFIG_DIR: dir, HERDR_WFP_CWD: '/wt/BIT-1', HERDR_BIN_PATH: 'herdr', HERDR_PLUGIN_ID: 'tdi.worktree-from-linear' }, exec, fetchFn, select: async (list) => list[0], log: () => {} });
+  assert.equal(code, 0);
+  assert.equal(seenAuth, 'acme-key');
+  // The worktree itself is still the checkout we operate on...
+  assert.ok(calls.some((c) => c[0] === 'herdr' && c.includes('--cwd') && c.includes('/wt/BIT-1')));
+  // ...but the details pane must resolve the same key as the picker did.
+  assert.ok(calls.some((c) => c.includes('HERDR_WFP_SOURCE_REPO_ROOT=/projects/acme')));
+  rmSync(dir, { recursive: true, force: true });
+});
+
 test('run does NOT open a details pane unless showIssueDetails is set', async () => {
   const dir = keyDir(); // default: showIssueDetails off
   const calls = [];

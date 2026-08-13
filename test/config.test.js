@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { loadConfig } from '../lib/config.js';
 
@@ -78,6 +78,45 @@ test('loadConfig selects the most specific path key before the default key', () 
 test('loadConfig ignores invalid path key entries', () => {
   const dir = withDir(JSON.stringify({ linearApiKey: 'default-key', linearApiKeysByPath: { '/repo': '' } }));
   assert.equal(loadConfig(dir, '/repo').linearApiKey, 'default-key');
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('loadConfig expands a leading ~ in path keys', () => {
+  const dir = withDir(JSON.stringify({
+    linearApiKey: 'default-key',
+    linearApiKeysByPath: { '~/work/acme': 'acme-key' },
+  }));
+  assert.equal(loadConfig(dir, join(homedir(), 'work/acme')).linearApiKey, 'acme-key');
+  assert.equal(loadConfig(dir, join(homedir(), 'work/acme/src')).linearApiKey, 'acme-key');
+  assert.equal(loadConfig(dir, join(homedir(), 'work/other')).linearApiKey, 'default-key');
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('loadConfig ignores relative path keys instead of resolving them against cwd', () => {
+  const dir = withDir(JSON.stringify({
+    linearApiKey: 'default-key',
+    linearApiKeysByPath: { 'work/acme': 'acme-key' },
+  }));
+  assert.equal(loadConfig(dir, join(process.cwd(), 'work/acme')).linearApiKey, 'default-key');
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('loadConfig honors a "/" path key as a catch-all', () => {
+  const dir = withDir(JSON.stringify({
+    linearApiKey: 'default-key',
+    linearApiKeysByPath: { '/': 'root-key', '/projects/acme': 'acme-key' },
+  }));
+  assert.equal(loadConfig(dir, '/anywhere/else').linearApiKey, 'root-key');
+  assert.equal(loadConfig(dir, '/projects/acme/src').linearApiKey, 'acme-key');
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('loadConfig accepts a trailing separator on a path key', () => {
+  const dir = withDir(JSON.stringify({
+    linearApiKey: 'default-key',
+    linearApiKeysByPath: { '/projects/acme/': 'acme-key' },
+  }));
+  assert.equal(loadConfig(dir, '/projects/acme/src').linearApiKey, 'acme-key');
   rmSync(dir, { recursive: true, force: true });
 });
 
