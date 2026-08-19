@@ -121,3 +121,25 @@ test('run is a no-op when the user cancels', async () => {
   assert.equal(calls.some((c) => c.includes('fetch')), false);
   rmSync(dir, { recursive: true, force: true });
 });
+
+test('run routes the worktree to the repo mapped to the issue team', async () => {
+  const dir = keyDir({ repos: { BIT: '/mapped-repo' } });
+  const { exec, calls } = fakeExec();
+  const fetchFn = async () => ({ ok: true, status: 200, text: async () => SAMPLE });
+  const code = await run({ env: { HERDR_PLUGIN_CONFIG_DIR: dir, HERDR_WFP_CWD: '/repo', HERDR_BIN_PATH: 'herdr' }, exec, fetchFn, select: async (list) => list[0], log: () => {} });
+  assert.equal(code, 0);
+  const create = calls.find((c) => c[0] === 'herdr' && c.includes('create'));
+  assert.ok(create.includes('/mapped-repo'));
+  assert.ok(!create.includes('/repo'));
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('run falls back to the invoking repo for an unmapped team', async () => {
+  const dir = keyDir({ repos: { OTHER: '/elsewhere' } });
+  const { exec, calls } = fakeExec();
+  const fetchFn = async () => ({ ok: true, status: 200, text: async () => SAMPLE });
+  const code = await run({ env: { HERDR_PLUGIN_CONFIG_DIR: dir, HERDR_WFP_CWD: '/repo', HERDR_BIN_PATH: 'herdr' }, exec, fetchFn, select: async (list) => list[0], log: () => {} });
+  assert.equal(code, 0);
+  assert.ok(calls.find((c) => c[0] === 'herdr' && c.includes('create')).includes('/repo'));
+  rmSync(dir, { recursive: true, force: true });
+});
