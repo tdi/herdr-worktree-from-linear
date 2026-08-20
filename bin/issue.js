@@ -17,6 +17,22 @@ function paneWidth() {
   return Math.max(40, (process.stdout.columns || 80) - 2);
 }
 
+// Hold the pane open after rendering, without acting like a prompt: the tty still echoes,
+// so typing into a finished pane would print stray characters over the issue, and the
+// cursor left sitting below the text reads as an input line. Raw mode stops the echo (and
+// with it any interpretation of Ctrl-C, so quit on it explicitly).
+function hold() {
+  process.stdout.write('\x1b[?25l');
+  const restore = () => process.stdout.write('\x1b[?25h');
+  process.on('exit', restore);
+  if (!process.stdin.isTTY) return process.stdin.resume();
+  process.stdin.setRawMode(true);
+  process.stdin.resume();
+  process.stdin.on('data', (buf) => {
+    if (buf.includes(0x03) || buf.includes(0x04) || buf.includes(0x71)) process.exit(0);  // Ctrl-C, Ctrl-D, q
+  });
+}
+
 // Render the markdown with glow when it is installed, re-rendering at the new width on
 // resize. Returns false when glow cannot be used, so the caller prints the plain panel
 // instead.
@@ -47,7 +63,7 @@ function renderWithGlow(markdown, fallback) {
       if (restart) { restart = false; return render(); }
       // A glow that starts but fails (bad config, unknown style) leaves a blank pane.
       if (err) process.stdout.write(fallback);
-      process.stdin.resume();  // hold the pane open until it is closed
+      hold();
     };
     child.on('error', done);
     child.on('exit', (code) => done(code ? new Error(`glow exited ${code}`) : null));
@@ -78,11 +94,11 @@ async function main() {
   }
   const plain = formatIssue(issue);
   // Keep the pane alive as a static reference panel (herdr scrollback handles long
-  // descriptions); close it with the pane's own key binding or Ctrl-C. The glow path
-  // resumes stdin itself, once glow is done with the tty.
+  // descriptions); close it with q, Ctrl-C, or the pane's own key binding. The glow path
+  // holds the pane itself, once glow is done with the tty.
   if (issue.error || !renderWithGlow(formatIssueMarkdown(issue), plain)) {
     process.stdout.write(plain);
-    process.stdin.resume();
+    hold();
   }
 }
 
