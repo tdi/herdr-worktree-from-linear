@@ -3,6 +3,7 @@
   "issueLimit": 50,
   "base": "default",
   "teamKey": "BIT",
+  "repos": { "BIT": "/home/you/bit-repo" },
   "fzfLayout": "down",
   "placement": "right",
   "popupWidth": "80%",

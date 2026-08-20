@@ -31,6 +31,7 @@ herdr plugin install tdi/herdr-worktree-from-linear
   "issueLimit": 50,
   "base": "default",
   "teamKey": "BIT",
+  "repos": { "BIT": "/home/you/bit-repo" },
   "assignedToMe": true,
   "includeTriage": true,
   "placement": "right",
@@ -46,6 +47,17 @@ herdr plugin install tdi/herdr-worktree-from-linear
 - `base` — where the new branch starts: `"default"` (repo default branch),
   `"head"` (current checkout), or an explicit branch name (e.g. `"develop"`).
 - `teamKey` — optional; restrict to one team (e.g. `BIT`).
+- `repos` — optional; maps a Linear team key to the repo the worktree is created
+  in, so a pick routes by the issue's team rather than by whichever pane invoked
+  the action:
+
+  ```json
+  "repos": { "WIN": "/home/you/windmill", "DOCS": "/home/you/docs" }
+  ```
+
+  A team absent from the map falls back to the invoking pane's repo, which is
+  also the whole behaviour when `repos` is unset. With a mapped team you no
+  longer need to invoke the action from inside a git repo at all.
 - `assignedToMe` — optional; when `true`, only list issues assigned to you (the
   API key's user). Default `false` (all assignees).
 - `includeTriage` — optional; when `true`, also list issues in the triage state
