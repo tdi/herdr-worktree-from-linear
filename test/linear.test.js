@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildIssuesBody, parseIssues, listIssues, parseIdentifier, buildIssueBody, fetchIssue } from '../lib/linear.js';
+import { buildIssuesBody, parseIssues, listIssues, parseIdentifier, buildIssueBody, fetchIssue, threadComments } from '../lib/linear.js';
 
 const SAMPLE = JSON.stringify({ data: { issues: { nodes: [
   { identifier: 'BIT-990', title: 'Label API keys', branchName: 'tdi/bit-990-label', url: 'u1', state: { name: 'In Progress' }, assignee: { displayName: 'Darek' }, team: { key: 'BIT' } },
@@ -76,22 +76,62 @@ test('parseIdentifier splits team key and number, null on junk', () => {
   assert.equal(parseIdentifier(''), null);
 });
 
-test('buildIssueBody filters by team key and number and asks for the description', () => {
+test('buildIssueBody filters by team key and number and asks for the pane fields', () => {
   const b = buildIssueBody('BIT', 123);
   assert.match(b.query, /team:\s*\{\s*key:\s*\{\s*eq:\s*"BIT"/);
   assert.match(b.query, /number:\s*\{\s*eq:\s*123/);
-  assert.match(b.query, /description/);
+  for (const field of ['description', 'priorityLabel', 'estimate', 'labels', 'project', 'cycle', 'comments\\(first: 100\\)', 'parent']) {
+    assert.match(b.query, new RegExp(field));
+  }
+});
+
+test('threadComments nests replies under their root, oldest first', () => {
+  const roots = threadComments([
+    { id: 'r2', createdAt: '2026-07-22T12:00', body: 'second thread', user: { displayName: 'B' } },
+    { id: 'c2', createdAt: '2026-07-22T09:00', body: 'later reply', parent: { id: 'r1' }, user: { displayName: 'C' } },
+    { id: 'r1', createdAt: '2026-07-22T08:00', body: 'first thread', user: { displayName: 'A' } },
+    { id: 'c1', createdAt: '2026-07-22T08:30', body: 'early reply', parent: { id: 'r1' }, externalUser: { name: 'Ext' } },
+  ]);
+  assert.deepEqual(roots.map((r) => r.id), ['r1', 'r2']);
+  assert.deepEqual(roots[0].replies.map((r) => [r.id, r.author]), [['c1', 'Ext'], ['c2', 'C']]);
+  assert.deepEqual(roots[1].replies, []);
+});
+
+test('threadComments keeps a reply whose parent is off the page, and flattens deeper nesting', () => {
+  const roots = threadComments([
+    { id: 'orphan', createdAt: '2026-07-22T08:00', body: 'x', parent: { id: 'gone' } },
+    { id: 'root', createdAt: '2026-07-22T09:00', body: 'r' },
+    { id: 'reply', createdAt: '2026-07-22T09:30', body: 'a', parent: { id: 'root' } },
+    { id: 'deep', createdAt: '2026-07-22T10:00', body: 'b', parent: { id: 'reply' } },
+  ]);
+  assert.deepEqual(roots.map((r) => r.id), ['orphan', 'root']);
+  assert.deepEqual(roots[1].replies.map((r) => r.id), ['reply', 'deep']);
+  assert.equal(threadComments(undefined).length, 0);
 });
 
 test('fetchIssue posts with auth and maps a single issue', async () => {
   const ISSUE = JSON.stringify({ data: { issues: { nodes: [
-    { identifier: 'BIT-123', title: 'Do it', description: 'Body', url: 'u', state: { name: 'Todo' }, assignee: { displayName: 'Sven' }, team: { key: 'BIT' } },
+    { identifier: 'BIT-123', title: 'Do it', description: 'Body', url: 'u', state: { name: 'Todo' }, assignee: { displayName: 'Sven' }, team: { key: 'BIT' },
+      priorityLabel: 'High', estimate: 3, labels: { nodes: [{ name: 'Android' }] }, project: { name: 'Upsell' }, cycle: { number: 226, name: null },
+      comments: { nodes: [{ id: 'c1', createdAt: '2026-07-22T08:00', body: 'hi', user: { displayName: 'Aurelien' } }] } },
   ] } } });
   const calls = [];
   const fetchFn = async (url, opts) => { calls.push({ url, opts }); return { ok: true, status: 200, text: async () => ISSUE }; };
   const issue = await fetchIssue({ linearApiKey: 'k' }, 'BIT-123', fetchFn);
-  assert.deepEqual(issue, { identifier: 'BIT-123', title: 'Do it', description: 'Body', url: 'u', stateName: 'Todo', assignee: 'Sven' });
+  assert.deepEqual(issue, {
+    identifier: 'BIT-123', title: 'Do it', description: 'Body', url: 'u', stateName: 'Todo', assignee: 'Sven',
+    priority: 'High', estimate: 3, project: 'Upsell', cycle: '226', labels: ['Android'],
+    comments: [{ id: 'c1', parentId: '', createdAt: '2026-07-22T08:00', author: 'Aurelien', body: 'hi', replies: [] }],
+  });
   assert.equal(calls[0].opts.headers.Authorization, 'k');
+});
+
+test('fetchIssue tolerates an issue with none of the extras set', async () => {
+  const ISSUE = JSON.stringify({ data: { issues: { nodes: [
+    { identifier: 'BIT-1', title: 'T', priorityLabel: 'No priority', estimate: null, project: null, cycle: null, labels: { nodes: [] }, comments: { nodes: [] } },
+  ] } } });
+  const issue = await fetchIssue({ linearApiKey: 'k' }, 'BIT-1', async () => ({ ok: true, status: 200, text: async () => ISSUE }));
+  assert.deepEqual([issue.priority, issue.estimate, issue.project, issue.cycle, issue.labels, issue.comments], ['No priority', null, '', '', [], []]);
 });
 
 test('fetchIssue throws on a bad identifier or a missing issue', async () => {
