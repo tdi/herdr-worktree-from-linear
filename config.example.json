@@ -1,5 +1,8 @@
 {
-  "linearApiKey": "lin_api_xxx",
+  "linearApiKeyEnvByPath": [
+    { "contains": "hsys", "env": "LINEAR_API_KEY_HSYS" }
+  ],
+  "linearApiKeyEnvDefault": "LINEAR_API_KEY_EMBER",
   "issueLimit": 50,
   "base": "default",
   "teamKey": "BIT",

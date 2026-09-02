@@ -41,6 +41,33 @@ test('run creates a worktree on the issue branch off origin/main', async () => {
   rmSync(dir, { recursive: true, force: true });
 });
 
+test('run selects the Linear API key using the resolved repo root', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'wfl-run-'));
+  writeFileSync(join(dir, 'config.json'), JSON.stringify({
+    linearApiKeyEnvByPath: [{ contains: 'hsys', env: 'LINEAR_API_KEY_MATCH' }],
+    linearApiKeyEnvDefault: 'LINEAR_API_KEY_DEFAULT',
+  }));
+  const { exec: baseExec } = fakeExec();
+  const exec = (cmd, args = []) => {
+    if (cmd === 'git' && args.includes('--show-toplevel')) {
+      return { status: 0, stdout: '/repo/HSYS\n', stderr: '' };
+    }
+    return baseExec(cmd, args);
+  };
+  const fetchFn = async (_url, options) => {
+    assert.equal(options.headers.Authorization, 'test-key-1');
+    return { ok: true, status: 200, text: async () => '{"data":{"issues":{"nodes":[]}}}' };
+  };
+  const env = {
+    HERDR_PLUGIN_CONFIG_DIR: dir,
+    HERDR_WFP_CWD: '/repo/HSYS',
+    LINEAR_API_KEY_MATCH: 'test-key-1',
+    LINEAR_API_KEY_DEFAULT: 'test-key-default',
+  };
+  assert.equal(await run({ env, exec, fetchFn, log: () => {} }), 0);
+  rmSync(dir, { recursive: true, force: true });
+});
+
 test('run opens the issue-details plugin pane in the freshly created worktree', async () => {
   const dir = keyDir({ showIssueDetails: true });
   const calls = [];

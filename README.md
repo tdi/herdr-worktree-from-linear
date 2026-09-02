@@ -18,9 +18,10 @@ herdr plugin install tdi/herdr-worktree-from-linear
   overlay; without it a plain numbered prompt is used.
 - **`glow`** — optional (`brew install glow`); renders the issue pane's markdown.
   Without it the pane prints the same plain-text panel as before.
-- **A Linear personal API key** — Linear → Settings → Security & access → API →
-  create a personal key. Put it in the plugin config, or export it as
-  `LINEAR_API_KEY` (below).
+- **A Linear personal API key for each workspace** — Linear → Settings →
+  Security & access → API → create a personal key. Export each key under an
+  environment-variable name, then configure the plugin to select that name by
+  repository path (below).
 - **`git`** and **Node.js** (herdr invokes `node`). No `gh` needed.
 
 ## Configure
@@ -29,7 +30,10 @@ herdr plugin install tdi/herdr-worktree-from-linear
 
 ```json
 {
-  "linearApiKey": "lin_api_xxx",
+  "linearApiKeyEnvByPath": [
+    { "contains": "hsys", "env": "LINEAR_API_KEY_HSYS" }
+  ],
+  "linearApiKeyEnvDefault": "LINEAR_API_KEY_EMBER",
   "issueLimit": 50,
   "base": "default",
   "teamKey": "BIT",
@@ -43,7 +47,14 @@ herdr plugin install tdi/herdr-worktree-from-linear
 }
 ```
 
-- `linearApiKey` (required, unless supplied via the environment — see below).
+- `linearApiKeyEnvByPath` — optional ordered path rules for selecting an API
+  key environment variable. The first rule whose `contains` substring appears
+  in the repository root wins; matching is case-insensitive.
+- `linearApiKeyEnvDefault` — the environment-variable name used when no path
+  rule matches. This supports a small exception list with one common default.
+- `linearApiKey` — legacy key value. Existing configs remain supported and an
+  explicit value still takes precedence, but new configs should keep key values
+  out of `config.json` and use the environment-variable options above.
 - `issueLimit` — max issues listed (default 50).
 - `base` — where the new branch starts: `"default"` (repo default branch),
   `"head"` (current checkout), or an explicit branch name (e.g. `"develop"`).
@@ -65,12 +76,34 @@ herdr plugin install tdi/herdr-worktree-from-linear
 
 ### API key from the environment
 
-If `linearApiKey` is absent from `config.json`, the plugin falls back to the
-`LINEAR_API_KEY` environment variable — the same name Linear's own SDK and CLI
-use. Keep the key in a secret manager instead of on disk: herdr spawns plugin
-actions as child processes, so anything that exports the variable into the herdr
-server's environment works — `op run --`, a systemd `EnvironmentFile=`, direnv,
-or a plain shell export before `herdr`. `config.json` wins when both are set.
+For multiple Linear workspaces, configure variable names rather than key values:
+
+```json
+{
+  "linearApiKeyEnvByPath": [
+    { "contains": "hsys", "env": "LINEAR_API_KEY_HSYS" }
+  ],
+  "linearApiKeyEnvDefault": "LINEAR_API_KEY_EMBER"
+}
+```
+
+With this example, any repository root containing `hsys` (in any letter case)
+reads `LINEAR_API_KEY_HSYS`; every other repository reads
+`LINEAR_API_KEY_EMBER`. Rules are checked in order and the first match wins.
+Only the variable names belong in `config.json`; export their key values into
+the herdr server's inherited environment.
+
+When neither `linearApiKeyEnvByPath` nor `linearApiKeyEnvDefault` is configured,
+the legacy behavior is unchanged: `linearApiKey` in `config.json` wins, then the
+plugin falls back to `LINEAR_API_KEY` — the same name Linear's SDK and CLI use.
+An explicit `linearApiKey` also wins over repository-path routing when both are
+present, for backward compatibility.
+
+Keep keys in a secret manager instead of on disk. Herdr spawns plugin actions as
+child processes, so anything that exports the variables into the herdr server's
+environment works — `op run --`, a systemd `EnvironmentFile=`, direnv, or a
+plain shell export before `herdr`. Key values are inherited through the process
+environment and are not added to pane command arguments.
 
 `popup` opens the picker as a centered floating window that doesn't disturb your
 pane layout — it requires **herdr ≥ 0.7.4** (older servers reject it; the plugin

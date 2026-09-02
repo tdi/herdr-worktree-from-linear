@@ -61,6 +61,110 @@ test('loadConfig prefers config.json over LINEAR_API_KEY', () => {
   rmSync(dir, { recursive: true, force: true });
 });
 
+test('loadConfig uses the first matching repo-path environment rule', () => {
+  const dir = withDir(JSON.stringify({
+    linearApiKeyEnvByPath: [
+      { contains: '/repos/', env: 'LINEAR_API_KEY_FIRST' },
+      { contains: 'hsys', env: 'LINEAR_API_KEY_SECOND' },
+    ],
+    linearApiKeyEnvDefault: 'LINEAR_API_KEY_DEFAULT',
+  }));
+  const env = {
+    LINEAR_API_KEY_FIRST: 'test-key-1',
+    LINEAR_API_KEY_SECOND: 'test-key-2',
+    LINEAR_API_KEY_DEFAULT: 'test-key-default',
+  };
+  assert.equal(loadConfig(dir, '/repos/hsys', env).linearApiKey, 'test-key-1');
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('loadConfig matches repo-path rules case-insensitively', () => {
+  const dir = withDir(JSON.stringify({
+    linearApiKeyEnvByPath: [{ contains: 'hsys', env: 'LINEAR_API_KEY_MATCH' }],
+    linearApiKeyEnvDefault: 'LINEAR_API_KEY_DEFAULT',
+  }));
+  const env = {
+    LINEAR_API_KEY_MATCH: 'test-key-1',
+    LINEAR_API_KEY_DEFAULT: 'test-key-default',
+  };
+  assert.equal(loadConfig(dir, '/repos/HSYS/service', env).linearApiKey, 'test-key-1');
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('loadConfig uses the configured default environment variable when no path matches', () => {
+  const dir = withDir(JSON.stringify({
+    linearApiKeyEnvByPath: [{ contains: 'hsys', env: 'LINEAR_API_KEY_MATCH' }],
+    linearApiKeyEnvDefault: 'LINEAR_API_KEY_DEFAULT',
+  }));
+  const env = {
+    LINEAR_API_KEY_MATCH: 'test-key-1',
+    LINEAR_API_KEY_DEFAULT: 'test-key-default',
+  };
+  assert.equal(loadConfig(dir, '/repos/another-project', env).linearApiKey, 'test-key-default');
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('loadConfig resolves the current repo when the caller does not supply a repo root', () => {
+  const dir = withDir(JSON.stringify({
+    linearApiKeyEnvByPath: [
+      { contains: 'HERDR-WORKTREE-FROM-LINEAR', env: 'LINEAR_API_KEY_MATCH' },
+    ],
+    linearApiKeyEnvDefault: 'LINEAR_API_KEY_DEFAULT',
+  }));
+  const env = {
+    LINEAR_API_KEY_MATCH: 'test-key-1',
+    LINEAR_API_KEY_DEFAULT: 'test-key-default',
+  };
+  assert.equal(loadConfig(dir, undefined, env).linearApiKey, 'test-key-1');
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('loadConfig uses the configured default when the current directory is not a repo', () => {
+  const configDir = withDir(JSON.stringify({
+    linearApiKeyEnvByPath: [{ contains: '', env: 'LINEAR_API_KEY_MATCH' }],
+    linearApiKeyEnvDefault: 'LINEAR_API_KEY_DEFAULT',
+  }));
+  const cwd = mkdtempSync(join(tmpdir(), 'wfl-not-repo-'));
+  const previousCwd = process.cwd();
+  try {
+    process.chdir(cwd);
+    assert.equal(loadConfig(configDir, undefined, {
+      LINEAR_API_KEY_MATCH: 'test-key-1',
+      LINEAR_API_KEY_DEFAULT: 'test-key-default',
+    }).linearApiKey, 'test-key-default');
+  } finally {
+    process.chdir(previousCwd);
+    rmSync(cwd, { recursive: true, force: true });
+    rmSync(configDir, { recursive: true, force: true });
+  }
+});
+
+test('loadConfig prefers an explicit key over repo-path environment routing', () => {
+  const dir = withDir(JSON.stringify({
+    linearApiKey: 'test-key-explicit',
+    linearApiKeyEnvByPath: [{ contains: 'hsys', env: 'LINEAR_API_KEY_MATCH' }],
+    linearApiKeyEnvDefault: 'LINEAR_API_KEY_DEFAULT',
+  }));
+  const env = {
+    LINEAR_API_KEY_MATCH: 'test-key-1',
+    LINEAR_API_KEY_DEFAULT: 'test-key-default',
+  };
+  assert.equal(loadConfig(dir, '/repos/hsys', env).linearApiKey, 'test-key-explicit');
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('loadConfig reports the selected environment variable when it is unset', () => {
+  const dir = withDir(JSON.stringify({
+    linearApiKeyEnvByPath: [{ contains: 'hsys', env: 'LINEAR_API_KEY_MATCH' }],
+    linearApiKeyEnvDefault: 'LINEAR_API_KEY_DEFAULT',
+  }));
+  assert.throws(
+    () => loadConfig(dir, '/repos/hsys', { LINEAR_API_KEY_MATCH: '' }),
+    /set linearApiKey in config\.json or the LINEAR_API_KEY_MATCH environment variable \(Linear personal API key\)/
+  );
+  rmSync(dir, { recursive: true, force: true });
+});
+
 test('loadConfig ignores an empty LINEAR_API_KEY', () => {
   const dir = withDir('{"issueLimit":5}');
   withEnvKey('', () => {
