@@ -45,6 +45,8 @@ herdr plugin install tdi/herdr-worktree-from-linear
 ```
 
 - `linearApiKey` (required, unless supplied via the environment — see below).
+- `linearApiKeyEnv` — optional; directory → environment-variable name, for
+  several Linear workspaces (see below).
 - `issueLimit` — max issues listed (default 50).
 - `base` — where the new branch starts: `"default"` (repo default branch),
   `"head"` (current checkout), or an explicit branch name (e.g. `"develop"`).
@@ -87,6 +89,29 @@ or a plain shell export before `herdr`. `config.json` wins when both are set.
 `popup` opens the picker as a centered floating window that doesn't disturb your
 pane layout — it requires **herdr ≥ 0.7.4** (older servers reject it; the plugin
 still works with the other placements).
+
+### Several Linear workspaces
+
+A personal API key only sees one Linear workspace. To use more than one, map the
+directories your repos live in to the **name** of the environment variable that
+holds that workspace's key:
+
+```json
+"linearApiKeyEnv": {
+  "~/work/acme": "LINEAR_API_KEY_ACME",
+  "~/work/beta": "LINEAR_API_KEY_BETA"
+}
+```
+
+The repo you invoke the action from picks the key: the most specific directory
+containing it wins, and a repo outside every directory (or invoking from outside
+a git repo) uses `linearApiKey` / `LINEAR_API_KEY` as before; a matched variable
+takes precedence over both. A linked worktree matches as its main repo does,
+wherever herdr placed it. Only variable names go in `config.json` — export the
+values into the herdr server's environment as above (`op run --env-file=...`,
+`EnvironmentFile=`, ...). Paths must be absolute or start with `~/`. `repos`
+still decides where the worktree is created; this only decides which workspace
+the issues are listed from, and the issue-details pane reads the same variable.
 
 ## Use
 

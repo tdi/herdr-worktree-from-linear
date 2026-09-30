@@ -74,6 +74,11 @@ test('issuePaneOpenArgs targets the root pane and passes the identifier via env'
   );
 });
 
+test('issuePaneOpenArgs forwards the selected key variable name, never a value', () => {
+  const args = issuePaneOpenArgs('tdi.worktree-from-linear', 'wN:p1', 'BIT-123', 'KEY_ACME');
+  assert.deepEqual(args.slice(-4), ['--env', 'HERDR_WFP_ISSUE=BIT-123', '--env', 'HERDR_WFP_KEY_ENV=KEY_ACME']);
+});
+
 test('openIssuePane opens the issue plugin pane below root, then swaps it up', () => {
   const calls = [];
   const exec = (cmd, args = []) => {

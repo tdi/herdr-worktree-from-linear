@@ -173,3 +173,58 @@ test('run still succeeds when the sidebar label cannot be reported', async () =>
   assert.ok(logs.some((m) => /created worktree for BIT-1/.test(m)), 'still reports the worktree it made');
   rmSync(dir, { recursive: true, force: true });
 });
+
+test('run selects the key by the invoking repo and hands its variable name to the details pane', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'wfl-run-'));
+  writeFileSync(join(dir, 'config.json'), JSON.stringify({
+    linearApiKeyEnv: { '/work/acme': 'KEY_ACME' },
+    repos: { BIT: '/work/bit-repo' },
+    showIssueDetails: true,
+  }));
+  const calls = [];
+  const exec = (cmd, args = []) => {
+    calls.push([cmd, ...args]);
+    if (cmd === 'git' && args.includes('list')) return { status: 0, stdout: 'worktree /work/acme/app\nbranch refs/heads/main\n', stderr: '' };
+    if (cmd === 'git' && args.includes('symbolic-ref')) return { status: 0, stdout: 'origin/main\n', stderr: '' };
+    if (cmd === 'git' && args.includes('rev-parse')) return { status: 1, stdout: '', stderr: '' };
+    if (args[0] === 'worktree') return { status: 0, stdout: '{"result":{"root_pane":{"pane_id":"wN:p1"}}}', stderr: '' };
+    if (args[0] === 'plugin') return { status: 0, stdout: '{"result":{"plugin_pane":{"pane":{"pane_id":"wN:pD"}}}}', stderr: '' };
+    return { status: 0, stdout: '', stderr: '' };
+  };
+  const auth = [];
+  const fetchFn = async (_url, options) => {
+    auth.push(options.headers.Authorization);
+    return { ok: true, status: 200, text: async () => SAMPLE };
+  };
+  const env = { HERDR_PLUGIN_CONFIG_DIR: dir, HERDR_WFP_CWD: '/work/acme/app', HERDR_BIN_PATH: 'herdr', HERDR_PLUGIN_ID: 'p', KEY_ACME: 'acme-key', LINEAR_API_KEY: 'default-key' };
+  assert.equal(await run({ env, exec, fetchFn, select: async (list) => list[0], log: () => {}, warn: () => {} }), 0);
+  assert.deepEqual(auth, ['acme-key']);
+  assert.ok(calls.find((c) => c[0] === 'herdr' && c.includes('create')).includes('/work/bit-repo'));
+  const pane = calls.find((c) => c[1] === 'plugin' && c[3] === 'open');
+  assert.ok(pane.includes('HERDR_WFP_KEY_ENV=KEY_ACME'));
+  assert.ok(!pane.some((a) => a.includes('acme-key')));
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('run uses the default key when invoked outside a git repo with a mapped team', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'wfl-run-'));
+  writeFileSync(join(dir, 'config.json'), JSON.stringify({
+    linearApiKeyEnv: { '/work/acme': 'KEY_ACME' },
+    repos: { BIT: '/work/bit-repo' },
+  }));
+  const exec = (cmd, args = []) => {
+    if (cmd === 'git' && args.includes('list')) return { status: 128, stdout: '', stderr: 'fatal: not a git repository' };
+    if (cmd === 'git' && args.includes('symbolic-ref')) return { status: 0, stdout: 'origin/main\n', stderr: '' };
+    if (cmd === 'git' && args.includes('rev-parse')) return { status: 1, stdout: '', stderr: '' };
+    return { status: 0, stdout: '', stderr: '' };
+  };
+  const auth = [];
+  const fetchFn = async (_url, options) => {
+    auth.push(options.headers.Authorization);
+    return { ok: true, status: 200, text: async () => SAMPLE };
+  };
+  const env = { HERDR_PLUGIN_CONFIG_DIR: dir, HERDR_WFP_CWD: '/tmp', HERDR_BIN_PATH: 'herdr', KEY_ACME: 'acme-key', LINEAR_API_KEY: 'default-key' };
+  assert.equal(await run({ env, exec, fetchFn, select: async (list) => list[0], log: () => {}, warn: () => {} }), 0);
+  assert.deepEqual(auth, ['default-key']);
+  rmSync(dir, { recursive: true, force: true });
+});
