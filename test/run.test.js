@@ -173,3 +173,21 @@ test('run still succeeds when the sidebar label cannot be reported', async () =>
   assert.ok(logs.some((m) => /created worktree for BIT-1/.test(m)), 'still reports the worktree it made');
   rmSync(dir, { recursive: true, force: true });
 });
+
+test('run moves the issue to started only when startOnCreate is set', async () => {
+  for (const startOnCreate of [false, true]) {
+    const dir = keyDir({ startOnCreate });
+    const { exec } = fakeExec();
+    const bodies = [];
+    const fetchFn = async (_u, opts) => {
+      const body = JSON.parse(opts.body);
+      bodies.push(body.query);
+      const json = /issueUpdate/.test(body.query) ? { data: { issueUpdate: { success: true } } }
+        : /states\(/.test(body.query) ? { data: { issues: { nodes: [{ id: 'u', state: { type: 'unstarted' }, team: { states: { nodes: [{ id: 's', name: 'In Progress', position: 1 }] } } }] } } }
+        : JSON.parse(SAMPLE);
+      return { ok: true, status: 200, text: async () => JSON.stringify(json) };
+    };
+    await run({ env: { HERDR_PLUGIN_CONFIG_DIR: dir, HERDR_WFP_CWD: '/repo', HERDR_BIN_PATH: 'herdr' }, exec, fetchFn, select: async (list) => list[0], log: () => {} });
+    assert.equal(bodies.some((q) => /issueUpdate/.test(q)), startOnCreate);
+  }
+});
