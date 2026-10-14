@@ -25,13 +25,13 @@ function withEnvKey(value, fn) {
 
 test('loadConfig merges defaults and keeps the api key', () => {
   const dir = withDir('{"linearApiKey":"k"}');
-  assert.deepEqual(loadConfig(dir), { issueLimit: 50, base: 'default', fzfLayout: 'down', showIssueDetails: false, linearApiKey: 'k' });
+  assert.deepEqual(loadConfig(dir), { issueLimit: 50, base: 'default', fzfLayout: 'down', showIssueDetails: false, worktreeLocation: 'repo', linearApiKey: 'k' });
   rmSync(dir, { recursive: true, force: true });
 });
 
 test('loadConfig honors overrides', () => {
   const dir = withDir('{"linearApiKey":"k","issueLimit":10,"base":"head","teamKey":"BIT"}');
-  assert.deepEqual(loadConfig(dir), { issueLimit: 10, base: 'head', fzfLayout: 'down', showIssueDetails: false, linearApiKey: 'k', teamKey: 'BIT' });
+  assert.deepEqual(loadConfig(dir), { issueLimit: 10, base: 'head', fzfLayout: 'down', showIssueDetails: false, worktreeLocation: 'repo', linearApiKey: 'k', teamKey: 'BIT' });
   rmSync(dir, { recursive: true, force: true });
 });
 
@@ -73,4 +73,10 @@ test('loadConfig throws on malformed JSON', () => {
   const dir = withDir('{bad');
   assert.throws(() => loadConfig(dir), /invalid config\.json/);
   rmSync(dir, { recursive: true, force: true });
+});
+
+test('loadConfig rejects an unknown worktreeLocation', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'wfl-'));
+  writeFileSync(join(dir, 'config.json'), JSON.stringify({ linearApiKey: 'k', worktreeLocation: 'tmp' }));
+  assert.throws(() => loadConfig(dir), /worktreeLocation/);
 });

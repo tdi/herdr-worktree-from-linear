@@ -36,6 +36,7 @@ herdr plugin install tdi/herdr-worktree-from-linear
   "repos": { "BIT": "/home/you/bit-repo" },
   "assignedToMe": true,
   "includeTriage": true,
+  "worktreeLocation": "repo",
   "placement": "right",
   "fzfLayout": "down",
   "showIssueDetails": true,
@@ -48,6 +49,11 @@ herdr plugin install tdi/herdr-worktree-from-linear
 - `issueLimit` — max issues listed (default 50).
 - `base` — where the new branch starts: `"default"` (repo default branch),
   `"head"` (current checkout), or an explicit branch name (e.g. `"develop"`).
+- `worktreeLocation` — where the checkout is created: `"repo"` (default) puts it
+  at `<repo>/.claude/worktrees/<branch-with-slashes-as-dashes>`, like Claude's
+  `--worktree`; `"herdr"` leaves it to herdr (`worktrees.directory`, default
+  `~/.herdr/worktrees/<repo>/<branch>`). Add `.claude/worktrees/` to the repo's
+  `.gitignore` to keep it out of `git status`.
 - `teamKey` — optional; restrict to one team (e.g. `BIT`).
 - `repos` — optional; maps a Linear team key to the repo the worktree is created
   in, so a pick routes by the issue's team rather than by whichever pane invoked
